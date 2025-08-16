@@ -7,14 +7,13 @@ import BlogForm from '../components/BlogForm'
 import Togglable from '../components/Togglable'
 import Notification from '../components/Notification'
 import Menu from "../components/Menu"
+import { setToken as setTareasToken } from '../services/tareasService'
 
-const Contactanos = () => {
+const Contactanos = ({ user: userProp, setUser: setUserProp }) => {
   const [blogs, setBlogs] = useState([])
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [user, setUser] = useState(null)
   const [message, setMessage] = useState(null)
-  const [Rol, setRol] = useState('')
   const blogFormRef = useRef()
 
   useEffect(() => {
@@ -25,154 +24,161 @@ const Contactanos = () => {
       })
   }, [])
 
-  useEffect(() => {
-    const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
-    if (loggedUserJSON) {
-      const user = JSON.parse(loggedUserJSON)
-      setUser(user)
-      blogService.setToken(user.token)
-    }
-  }, [])
-
-  const addBlog = async (blogObject, title, author) => {
-    blogFormRef.current.toggleVisibility()
+  const handleLogin = async (event) => {
+    event.preventDefault()
     try {
-      blogService.setToken(user.token)
-      const returnData = await blogService.create(blogObject)
-      const messageObject = {
-        message: `a new Blog: ${title} by ${author}`,
-        type: true,
-      }
-      setMessage(messageObject)
-      setTimeout(() => {
-        setMessage(null)
-      }, 5000)
-      setBlogs(blogs.concat(returnData))
-    }
-    catch (error) {
-      console.error(error)
-      const messageObject = {
-        message: `No se pudo crear el blog. Revisa el token o los datos`,
-        type: false,
-      }
-      setMessage(messageObject)
-      setTimeout(() => {
-        setMessage(null)
-      }, 5000)
-    }
+      const userData = await loginService.login({ 
+        username, 
+        password
+      })
 
+      // Verificamos que tengamos toda la información necesaria
+      if (!userData.userId || !userData.Rol) {
+        throw new Error('Información de usuario incompleta')
+      }
+
+      // Creamos el objeto de usuario completo según la respuesta del backend
+      const userToSave = {
+        username: userData.username,
+        name: userData.name,
+        token: userData.token,
+        Rol: userData.Rol,
+        id: userData.userId // Usamos userId que viene del backend
+      }
+
+      // Guardamos en localStorage
+      window.localStorage.setItem(
+        'loggedBlogappUser', 
+        JSON.stringify(userToSave)
+      )
+
+      // Configuramos los tokens
+      blogService.setToken(userData.token)
+      setTareasToken(userData.token)
+
+      // Actualizamos el estado global
+      setUserProp(userToSave)
+      
+      // Limpiamos campos
+      setUsername('')
+      setPassword('')
+      
+      setMessage({
+        message: `Bienvenido ${userData.name} (${userData.Rol})`,
+        type: true
+      })
+
+      // Log para debugging
+      console.log('Usuario logueado:', {
+        id: userData.userId,
+        rol: userData.Rol,
+        token: userData.token?.substring(0, 10) + '...'
+      })
+
+    } catch (error) {
+      console.error('Error en login:', error)
+      setMessage({
+        message: error.response?.data?.error || 'Error en el inicio de sesión',
+        type: false
+      })
+    }
+    setTimeout(() => setMessage(null), 5000)
   }
 
-  const updatedBlog = async (id, updateFields) => {
-    const blog = blogs.find(b => b.id === id)
+  const handleLogout = () => {
+    window.localStorage.removeItem('loggedBlogappUser')
+    setUserProp(null)
+    blogService.setToken(null)
+    setTareasToken(null)
+  }
+
+  // Funciones faltantes para el manejo de blogs
+  const addBlog = async (blogObject) => {
     try {
-      const returnedBlog = await blogService.update(id, updateFields)
-      setBlogs(blogs.map(b => b.id !== id ? b : returnedBlog))
+      const returnedBlog = await blogService.create(blogObject)
+      setBlogs(blogs.concat(returnedBlog))
+      setMessage({
+        message: `A new blog ${returnedBlog.title} by ${returnedBlog.author} added`,
+        type: true
+      })
     } catch (error) {
-      console.error('Error updating likes:', error)
-      const messageObject = {
-        message: `Blog "${blog.title}" was already removed from server`,
-        type: false,
-      }
-      setMessage(messageObject)
-      setTimeout(() => {
-        setMessage(null)
-      }, 5000)
-      setBlogs(blogs.filter(b => b.id !== id))
+      setMessage({
+        message: error.response.data.error,
+        type: false
+      })
+    }
+    setTimeout(() => setMessage(null), 5000)
+  }
+
+  const updatedBlog = async (id, blogObject) => {
+    try {
+      const returnedBlog = await blogService.update(id, blogObject)
+      setBlogs(blogs.map(blog => blog.id !== id ? blog : returnedBlog))
+    } catch (error) {
+      setMessage({
+        message: error.response.data.error,
+        type: false
+      })
     }
   }
 
   const deleteBlog = async (id) => {
     try {
       await blogService.remove(id)
+      setBlogs(blogs.filter(blog => blog.id !== id))
     } catch (error) {
-      console.log('Error: ', error);
-    } finally {
-      setBlogs(blogs.filter(b => b.id !== id))
+      setMessage({
+        message: error.response.data.error,
+        type: false
+      })
     }
   }
 
+  // Ordenar blogs por likes
+  const orderBlogs = [...blogs].sort((a, b) => b.likes - a.likes)
 
-  const handleLogin = async (event) => {
-    event.preventDefault()
-    try {
-      const user = await loginService.login({ username, password, Rol})
-
-      window.localStorage.setItem(
-        'loggedBlogappUser', JSON.stringify(user)
-      )
-      blogService.setToken(user.token)
-      setUser(user)
-      setUsername('')
-      setPassword('')
-      
-      const messageObject = {
-        message: `Welcome ${user.name}`,
-        type: true
-        
-      }
-      setMessage(messageObject)
-      setTimeout(() => {
-        setMessage(null)
-      }, 5000)
-    } catch (exception) {
-      console.log(exception)
-      const messageObject = {
-        message: `wrong username or password`,
-        type: false,
-      }
-      setMessage(messageObject)
-      setTimeout(() => {
-        setMessage(null)
-      }, 5000)
-    }
-  }
-
-  const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser')
-  if (loggedUserJSON) {
-    const user = JSON.parse(loggedUserJSON)
-    setUser(user)
-  }
-
-  const handleLogout = () => {
-    window.localStorage.removeItem('loggedBlogappUser')
-    setUser(null)
-  }
-
-  const orderBlogs = blogs.sort((a, b) => b.likes - a.likes)
-
-  return (
-    <div>
-      {user === null ? (
+return (
+  <div>
+    {!userProp ? (
+      <div>
+        <Menu user={userProp}/>
         <LoginForm
-          message={message}
           handleLogin={handleLogin}
           username={username}
           setUsername={setUsername}
           password={password}
           setPassword={setPassword}
+          message={message}
         />
-      ) :(
+      </div>
+    ) : (
         <>
-        <Menu user={user}/>
+          <Menu user={userProp}/>
           <h2>Blogs</h2>
           <Notification message={message} />
-          <button type="button" onClick={handleLogout}>logout</button>
+          <p>
+            {userProp.name} ({userProp.Rol}) conectado{' '}
+            <button onClick={handleLogout}>Cerrar sesión</button>
+          </p>
           <Togglable buttonLabel="new blog" ref={blogFormRef}>
             <BlogForm createBlog={addBlog} />
           </Togglable>
           <ol>
             {orderBlogs.map(blog => (
               <li key={blog.id}>
-                <Blog blog={blog} updateBlog={updatedBlog} deleteBlog={deleteBlog} user={user} />
+                <Blog 
+                  blog={blog} 
+                  updateBlog={updatedBlog} 
+                  deleteBlog={deleteBlog} 
+                  user={userProp} 
+                />
               </li>
             ))}
           </ol>
-
         </>
       )}
     </div>
   )
 }
 
-export default Contactanos;
+export default Contactanos

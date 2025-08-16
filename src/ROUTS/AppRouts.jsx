@@ -3,15 +3,16 @@ import Servicios from "../Pages/Servicios";
 import Contactanos from "../Pages/Contactanos";
 import SobreNosotros from "../Pages/SobreNosotros";
 import Crear from "../Pages/Crear-usuarios";
+import Tareas from "../Pages/Tareas";
 
-const AppRoutes = () => (
+const AppRoutes = ({ user, setUser }) => (
   <Router>
     <Routes>
-        <Route path="/" element={<Servicios/>} />
-        <Route path="/contactanos" element={<Contactanos/>} />
-        <Route path="/sobre-nosotros" element={<SobreNosotros/>} />
-        <Route path="/Tareas-ver">Tareas</Route>
-        <Route path="/Crear" element={<Crear/>} />
+      <Route path="/" element={<Servicios user={user} />} />
+      <Route path="/contactanos" element={<Contactanos user={user} setUser={setUser} />} />
+      <Route path="/sobre-nosotros" element={<SobreNosotros user={user} />} />
+      <Route path="/Tareas" element={<Tareas user={user} />} />
+      <Route path="/Crear" element={<Crear user={user} />} />
     </Routes>
   </Router>
 );
