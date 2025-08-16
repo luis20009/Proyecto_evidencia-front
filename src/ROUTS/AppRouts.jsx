@@ -4,6 +4,7 @@ import Contactanos from "../Pages/Contactanos";
 import SobreNosotros from "../Pages/SobreNosotros";
 import Crear from "../Pages/Crear-usuarios";
 import Tareas from "../Pages/Tareas";
+import VerTareas from "../Pages/Ver-Tareas";
 
 const AppRoutes = ({ user, setUser }) => (
   <Router>
@@ -12,6 +13,7 @@ const AppRoutes = ({ user, setUser }) => (
       <Route path="/contactanos" element={<Contactanos user={user} setUser={setUser} />} />
       <Route path="/sobre-nosotros" element={<SobreNosotros user={user} />} />
       <Route path="/Tareas" element={<Tareas user={user} />} />
+      <Route path="/Tareas-ver" element={<VerTareas user={user} />} />
       <Route path="/Crear" element={<Crear user={user} />} />
     </Routes>
   </Router>
