@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import Blog from '../components/Blog'
 import blogService from '../services/blogs'
 import LoginForm from '../components/Login'
 import loginService from '../services/login'
-import BlogForm from '../components/BlogForm'
-import Togglable from '../components/Togglable'
 import Notification from '../components/Notification'
 import Menu from "../components/Menu"
 import { setToken as setTareasToken } from '../services/tareasService'
@@ -160,21 +157,6 @@ return (
             {userProp.name} ({userProp.Rol}) conectado{' '}
             <button onClick={handleLogout}>Cerrar sesión</button>
           </p>
-          <Togglable buttonLabel="new blog" ref={blogFormRef}>
-            <BlogForm createBlog={addBlog} />
-          </Togglable>
-          <ol>
-            {orderBlogs.map(blog => (
-              <li key={blog.id}>
-                <Blog 
-                  blog={blog} 
-                  updateBlog={updatedBlog} 
-                  deleteBlog={deleteBlog} 
-                  user={userProp} 
-                />
-              </li>
-            ))}
-          </ol>
         </>
       )}
     </div>

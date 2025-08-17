@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import { obtenerMisTareas, setToken, responderTarea } from "../services/tareasService"
 import Menu from '../components/Menu'
 
-
 const VerTareas = ({ user }) => {
   const [tareas, setTareas] = useState([])
   const [mensaje, setMensaje] = useState(null)
@@ -31,16 +30,29 @@ const VerTareas = ({ user }) => {
   const handleResponderPregunta = async (tareaId, preguntaIndex, respuestaIndex) => {
     try {
       const tareaActualizada = await responderTarea(tareaId, preguntaIndex, respuestaIndex)
-      setTareas(tareas.map(tarea => 
+      setTareas(tareas.map(tarea =>
         tarea.id === tareaId ? tareaActualizada : tarea
       ))
-      setMensaje("Respuesta enviada correctamente")
+
+      const pregunta = tareaActualizada.preguntas[preguntaIndex]
+      const respuestaUsuario = pregunta.respuestas?.find(r => r.usuarioId === user.id)
+      const esCorrecta = pregunta.opciones[respuestaUsuario?.seleccion]?.esCorrecta
+
+      setMensaje(esCorrecta ? "¡Correcto! 🎉" : "Incorrecto. Inténtalo de nuevo 😟")
     } catch (error) {
       setMensaje(error?.response?.data?.error || "Error al enviar la respuesta")
     }
     setTimeout(() => setMensaje(null), 3000)
   }
 
+  const tareasPendientes = tareas.filter(tarea => {
+  const preguntas = tarea.preguntas || []
+  const respuestasUsuario = preguntas.map(p => 
+    p.respuestas?.find(r => r.usuarioId === user.id)
+  )
+  const haRespondidoTodas = respuestasUsuario.every(r => r && r.seleccion !== undefined)
+  return !haRespondidoTodas
+})
   return (
     <div className="tareas-container">
       <Menu user={user} />
@@ -50,50 +62,56 @@ const VerTareas = ({ user }) => {
           {mensaje}
         </p>
       )}
-      
+
       {user?.Rol === 'user' ? (
-        <ul className="tareas-lista">
-          {tareas.map(tarea => (
-            <li key={tarea.id} className="tarea-item">
-              <div className="tarea-header">
-                <h3>{tarea.titulo}</h3>
-                <span className={`estado ${tarea.completada ? 'completada' : 'pendiente'}`}>
-                  {tarea.completada ? 'Completada' : 'Pendiente'}
-                </span>
-              </div>
-              <p className="descripcion">{tarea.descripcion}</p>
-              <p className="fecha">Fecha límite: {new Date(tarea.fechaLimite).toLocaleDateString()}</p>
-              <p className="profesor">Asignado por: {tarea.nombreCreador}</p>
-              
-              <div className="preguntas-container">
-                {tarea.preguntas?.map((pregunta, preguntaIndex) => (
-                  <div key={preguntaIndex} className="pregunta-item">
-                    <h4>Pregunta {preguntaIndex + 1}: {pregunta.pregunta}</h4>
-                    <div className="opciones-lista">
-                      {pregunta.opciones.map((opcion, opcionIndex) => (
-                        <button
-                          key={opcionIndex}
-                          onClick={() => handleResponderPregunta(tarea.id, preguntaIndex, opcionIndex)}
-                          disabled={tarea.completada || pregunta.respuestaSeleccionada !== -1}
-                          className={`opcion-btn ${
-                            pregunta.respuestaSeleccionada === opcionIndex ? 'respondida' : ''
-                          }`}
-                        >
-                          {opcion.texto}
-                        </button>
-                      ))}
-                    </div>
-                    {pregunta.respuestaSeleccionada !== -1 && (
-                      <p className="respuesta-info">
-                        Tu respuesta: {pregunta.opciones[pregunta.respuestaSeleccionada].texto}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </li>
-          ))}
-        </ul>
+        tareasPendientes.length === 0 ? (
+          <p className="sin-tareas">🎉 ¡Todas tus tareas están completadas!</p>
+        ) : (
+          <ul className="tareas-lista">
+            {tareasPendientes.map(tarea => (
+              <li key={tarea.id} className="tarea-item">
+                <div className="tarea-header">
+                  <h3>{tarea.titulo}</h3>
+                  <span className="estado pendiente">Pendiente</span>
+                </div>
+                <p className="descripcion">{tarea.descripcion}</p>
+                <p className="fecha">Fecha límite: {new Date(tarea.fechaLimite).toLocaleDateString()}</p>
+                <p className="profesor">Asignado por: {tarea.nombreCreador}</p>
+
+                <div className="preguntas-container">
+                  {tarea.preguntas?.map((pregunta, preguntaIndex) => {
+                    const respuestaUsuario = pregunta.respuestas?.find(r => r.usuarioId === user.id)
+
+                    return (
+                      <div key={preguntaIndex} className="pregunta-item">
+                        <h4>Pregunta {preguntaIndex + 1}: {pregunta.pregunta}</h4>
+                        <div className="opciones-lista">
+                          {pregunta.opciones.map((opcion, opcionIndex) => (
+                            <button
+                              key={opcionIndex}
+                              onClick={() => handleResponderPregunta(tarea.id, preguntaIndex, opcionIndex)}
+                              disabled={!!respuestaUsuario}
+                              className={`opcion-btn ${
+                                respuestaUsuario?.seleccion === opcionIndex ? 'respondida' : ''
+                              }`}
+                            >
+                              {opcion.texto}
+                            </button>
+                          ))}
+                        </div>
+                        {respuestaUsuario && (
+                          <p className="respuesta-info">
+                            Tu respuesta: {pregunta.opciones[respuestaUsuario.seleccion]?.texto}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )
       ) : (
         <p className="no-permisos">No tienes permisos para ver las tareas</p>
       )}
