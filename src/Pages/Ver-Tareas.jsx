@@ -46,13 +46,18 @@ const VerTareas = ({ user }) => {
   }
 
   const tareasPendientes = tareas.filter(tarea => {
-  const preguntas = tarea.preguntas || []
-  const respuestasUsuario = preguntas.map(p => 
-    p.respuestas?.find(r => r.usuarioId === user.id)
-  )
-  const haRespondidoTodas = respuestasUsuario.every(r => r && r.seleccion !== undefined)
-  return !haRespondidoTodas
-})
+    const preguntas = tarea.preguntas || []
+    const respuestasUsuario = preguntas.map(p => 
+      p.respuestas?.find(r => r.usuarioId === user.id)
+    )
+    const haRespondidoTodas = respuestasUsuario.every(r => r && r.seleccion !== undefined)
+    // Filtrar por fecha: solo mostrar si la fecha límite es hoy o en el futuro
+    const hoy = new Date()
+    hoy.setHours(0,0,0,0) // Ignorar la hora
+    const fechaLimite = new Date(tarea.fechaLimite)
+    fechaLimite.setHours(0,0,0,0)
+    return !haRespondidoTodas && fechaLimite >= hoy
+  })
   return (
     <div className="tareas-container">
       <Menu user={user} />
@@ -117,6 +122,6 @@ const VerTareas = ({ user }) => {
       )}
     </div>
   )
-}
 
+}
 export default VerTareas
